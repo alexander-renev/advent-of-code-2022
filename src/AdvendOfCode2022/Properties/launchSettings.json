@@ -1,0 +1,11 @@
+﻿{
+  "profiles": {
+    "AdventOfCode": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AOC_DAY": "1",
+        "AOC_TEST": "false"
+      }
+    }
+  }
+}

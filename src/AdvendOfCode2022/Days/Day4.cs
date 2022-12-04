@@ -3,8 +3,6 @@
 [Day(4)]
 public class Day4 : IDay
 {
-    private record struct ValueRange(int From, int To);
-
     public void CalculateTaskOne(String input)
     {
         var data = ParseInput(input);
@@ -12,13 +10,15 @@ public class Day4 : IDay
         {
             var (first, second) = item;
             return (
-                       IsBetween(first.From, second.From, second.To)
-                       && IsBetween(first.To, second.From, second.To)
+                       second.Contains(first.Start.Value)
+                       &&
+                       second.Contains(first.End.Value)
                    )
                    ||
                    (
-                       IsBetween(second.From, first.From, first.To)
-                       && IsBetween(second.To, first.From, first.To)
+                       first.Contains(second.Start.Value)
+                       &&
+                       first.Contains(second.End.Value)
                    );
         }).Count();
 
@@ -32,20 +32,22 @@ public class Day4 : IDay
         {
             var (first, second) = item;
             return (
-                       IsBetween(first.From, second.From, second.To)
-                       || IsBetween(first.To, second.From, second.To)
+                       second.Contains(first.Start.Value)
+                       ||
+                       second.Contains(first.End.Value)
                    )
                    ||
                    (
-                       IsBetween(second.From, first.From, first.To)
-                       || IsBetween(second.To, first.From, first.To)
+                       first.Contains(second.Start.Value)
+                       ||
+                       first.Contains(second.End.Value)
                    );
         }).Count();
 
         Console.WriteLine(count);
     }
 
-    private static (ValueRange first, ValueRange second)[] ParseInput(string input)
+    private static (Range first, Range second)[] ParseInput(string input)
     {
         return input.Split(Environment.NewLine)
             .Select(line =>
@@ -55,14 +57,17 @@ public class Day4 : IDay
             }).ToArray();
     }
 
-    private static ValueRange ParseRange(string input)
+    private static Range ParseRange(string input)
     {
         var parts = input.Split('-');
-        return new ValueRange(int.Parse(parts[0]), int.Parse(parts[1]));
+        return int.Parse(parts[0]) .. int.Parse(parts[1]);
     }
+}
 
-    private static bool IsBetween(int value, int from, int to)
+file static class RangeExtensions
+{
+    public static bool Contains(this Range range, int value)
     {
-        return value >= from && value <= to;
+        return range.Start.Value <= value && value <= range.End.Value;
     }
 }

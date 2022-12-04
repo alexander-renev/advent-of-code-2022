@@ -2,7 +2,7 @@
 
 public interface IDay
 {
-    void CalculateTaskOne(IInput source);
+    void CalculateTaskOne(string source);
 
-    void CalculateTaskTwo(IInput source);
+    void CalculateTaskTwo(string source);
 }

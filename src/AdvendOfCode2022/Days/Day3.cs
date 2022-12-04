@@ -1,9 +1,9 @@
 ﻿namespace AdvendOfCode2022.Days;
 
 [Day(3)]
-public class Day3 : DayBase
+public class Day3 : IDay
 {
-    protected override void CalculateTaskOne(string input)
+    public void CalculateTaskOne(string input)
     {
         var data = ParseInputForOne(input);
 
@@ -17,7 +17,7 @@ public class Day3 : DayBase
         Console.WriteLine(score);
     }
 
-    protected override void CalculateTaskTwo(string input)
+    public void CalculateTaskTwo(string input)
     {
         var data = ParseInputForTwo(input);
 

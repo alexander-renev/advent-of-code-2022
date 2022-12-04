@@ -3,16 +3,16 @@
 namespace AdvendOfCode2022.Days;
 
 [Day(1)]
-public sealed class Day1 : DayBase
+public sealed class Day1 : IDay
 {
-    protected override void CalculateTaskOne(string source)
+    public void CalculateTaskOne(string source)
     {
         var data = ParseSource(source);
         var maxValue = data.Select(d => d.Sum()).Max();
         Console.WriteLine(maxValue);
     }
 
-    protected override void CalculateTaskTwo(string source)
+    public void CalculateTaskTwo(string source)
     {
         var data = ParseSource(source);
         var max3Value = data.Select(d => d.Sum())

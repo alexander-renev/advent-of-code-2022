@@ -1,7 +1,7 @@
 ﻿namespace AdvendOfCode2022.Days;
 
 [Day(2)]
-public sealed class Day2 : DayBase
+public sealed class Day2 : IDay
 {
     private enum Figure
     {
@@ -23,7 +23,7 @@ public sealed class Day2 : DayBase
     private static readonly Dictionary<Figure, Figure> LosersOf = WinnersOf
         .ToDictionary(p => p.Value, p => p.Key);
 
-    protected override void CalculateTaskOne(string input)
+    public void CalculateTaskOne(string input)
     {
         var data = ParseInputForOne(input);
 
@@ -46,7 +46,7 @@ public sealed class Day2 : DayBase
         Console.WriteLine(score);
     }
 
-    protected override void CalculateTaskTwo(string input)
+    public void CalculateTaskTwo(string input)
     {
         var data = ParseInputForTwo(input);
 

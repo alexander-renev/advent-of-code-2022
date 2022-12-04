@@ -1,11 +1,11 @@
 ﻿namespace AdvendOfCode2022.Days;
 
 [Day(4)]
-public class Day4 : DayBase
+public class Day4 : IDay
 {
     private record struct ValueRange(int From, int To);
 
-    protected override void CalculateTaskOne(String input)
+    public void CalculateTaskOne(String input)
     {
         var data = ParseInput(input);
         var count = data.Where(item =>
@@ -25,7 +25,7 @@ public class Day4 : DayBase
         Console.WriteLine(count);
     }
 
-    protected override void CalculateTaskTwo(String input)
+    public void CalculateTaskTwo(String input)
     {
         var data = ParseInput(input);
         var count = data.Where(item =>

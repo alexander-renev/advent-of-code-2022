@@ -1,19 +1,4 @@
-﻿namespace AdvendOfCode2022.Inputs;
-
-[Input(4)]
-public class Day4 : IInput
-{
-    public String TestData => """ 
-        2-4,6-8
-        2-3,4-5
-        5-7,7-9
-        2-8,3-7
-        6-6,4-6
-        2-6,4-8
-        """;
-
-    public String Data => """
-5-90,4-90
+﻿5-90,4-90
 52-52,3-51
 46-81,45-80
 15-48,49-75
@@ -1013,5 +998,3 @@ public class Day4 : IInput
 5-72,6-72
 64-81,47-82
 3-64,7-64
-""";
-}

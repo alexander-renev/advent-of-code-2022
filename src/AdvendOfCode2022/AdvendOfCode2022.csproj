@@ -8,6 +8,28 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <None Remove="Inputs\day1-real.txt" />
+      <None Remove="Inputs\day1-test.txt" />
+      <None Remove="Inputs\day2-real.txt" />
+      <None Remove="Inputs\day2-test.txt" />
+      <None Remove="Inputs\day3-real.txt" />
+      <None Remove="Inputs\day3-test.txt" />
+      <None Remove="Inputs\day4-real.txt" />
+      <None Remove="Inputs\day4-test.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Inputs\day4-test.txt" />
+      <EmbeddedResource Include="Inputs\day4-real.txt" />
+      <EmbeddedResource Include="Inputs\day3-test.txt" />
+      <EmbeddedResource Include="Inputs\day3-real.txt" />
+      <EmbeddedResource Include="Inputs\day2-test.txt" />
+      <EmbeddedResource Include="Inputs\day2-real.txt" />
+      <EmbeddedResource Include="Inputs\day1-real.txt" />
+      <EmbeddedResource Include="Inputs\day1-test.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Autofac" Version="6.5.0" />
     </ItemGroup>
 

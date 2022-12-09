@@ -20,17 +20,6 @@ internal static class ContainerHelper
             builder.RegisterType(type).Named<IDay>(dayAttribute.Number.ToString(CultureInfo.InvariantCulture));
         }
         
-        foreach (var type in typeof(IDay).Assembly.GetTypes().Where(t => typeof(IInput).IsAssignableFrom(t) && !t.IsAbstract))
-        {
-            var inputAttribute = type.GetCustomAttribute<InputAttribute>();
-            if (inputAttribute is null)
-            {
-                continue;
-            }
-
-            builder.RegisterType(type).Named<IInput>(inputAttribute.Number.ToString(CultureInfo.InvariantCulture));
-        }
-        
         var container = builder.Build();
 
         return container;

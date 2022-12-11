@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -20,11 +20,15 @@
       <None Remove="Inputs\day5-test.txt" />
       <None Remove="Inputs\day6-real.txt" />
       <None Remove="Inputs\day6-test.txt" />
+      <None Remove="Inputs\day7-real.txt" />
+      <None Remove="Inputs\day7-test.txt" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Include="Inputs\day5-real.txt" />
       <EmbeddedResource Include="Inputs\day6-real.txt" />
+      <EmbeddedResource Include="Inputs\day7-real.txt" />
+      <EmbeddedResource Include="Inputs\day7-test.txt" />
       <EmbeddedResource Include="Inputs\day6-test.txt" />
       <EmbeddedResource Include="Inputs\day5-test.txt" />
       <EmbeddedResource Include="Inputs\day4-test.txt" />

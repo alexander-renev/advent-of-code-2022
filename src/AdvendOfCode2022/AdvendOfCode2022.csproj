@@ -18,10 +18,14 @@
       <None Remove="Inputs\day4-test.txt" />
       <None Remove="Inputs\day5-real.txt" />
       <None Remove="Inputs\day5-test.txt" />
+      <None Remove="Inputs\day6-real.txt" />
+      <None Remove="Inputs\day6-test.txt" />
     </ItemGroup>
 
     <ItemGroup>
       <EmbeddedResource Include="Inputs\day5-real.txt" />
+      <EmbeddedResource Include="Inputs\day6-real.txt" />
+      <EmbeddedResource Include="Inputs\day6-test.txt" />
       <EmbeddedResource Include="Inputs\day5-test.txt" />
       <EmbeddedResource Include="Inputs\day4-test.txt" />
       <EmbeddedResource Include="Inputs\day4-real.txt" />

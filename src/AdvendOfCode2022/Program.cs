@@ -11,6 +11,7 @@ var day = Environment.GetEnvironmentVariable("AOC_DAY");
 var solver = scope.ResolveNamed<IDay>(day);
 var dayNumber = int.Parse(day);
 
+Console.WriteLine($"Day {day} started");
 Console.WriteLine("Using test data");
 var testData = InputHelper.GetResource(dayNumber, "test");
 solver.CalculateTaskOne(testData);

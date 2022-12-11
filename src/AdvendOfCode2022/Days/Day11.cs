@@ -5,6 +5,32 @@ namespace AdvendOfCode2022.Days;
 [Day(11)]
 public class Day11 : IDay
 {
+    private interface IOperand
+    {
+    }
+
+    private sealed class OldValue : IOperand
+    {
+    }
+
+    private sealed class ConstantValue : IOperand
+    {
+        public int Value { get; }
+
+        public ConstantValue(int value)
+        {
+            Value = value;
+        }
+    }
+
+    private enum Operation
+    {
+        Add,
+        Subtract,
+        Multiply,
+        Divide
+    }
+
     private sealed class MonkeyDescription
     {
         public Func<BigInteger , BigInteger> Operation { get; }
@@ -21,7 +47,7 @@ public class Day11 : IDay
         }
     }
 
-    private class Monkey
+    private sealed class Monkey
     {
         public int Index { get; }
         public MonkeyDescription Description { get; }
@@ -39,7 +65,7 @@ public class Day11 : IDay
 
         public void Inspect() => Inspected += 1;
     }
-    
+
     public void CalculateTaskOne(string source)
     {
         CalculateTask(source, 20, level => level / 3);
@@ -84,52 +110,83 @@ public class Day11 : IDay
 
     private static Monkey[] ParseInput(string input, HashSet<BigInteger> divisors)
     {
-        return input.Split(Environment.NewLine + Environment.NewLine).Select(line => ParseMonkey(line, divisors)).ToArray();
-    }
+        var intList = Many(Int, sep: StringP(", "));
+        var titleLine = StringP("Monkey").AndR(WS).AndR(Int).AndL(StringP(":"));
+        var itemsLine = WS.AndR(StringP("Starting items:")).AndR(WS).AndR(intList);
+        var operandParser = Choice(
+            StringP("old", (IOperand)new OldValue()),
+            Int.Map(r => (IOperand)(new ConstantValue(r)))
+        );
+        var operationParser = Choice(
+            StringP("+", Operation.Add),
+            StringP("-", Operation.Subtract),
+            StringP("*", Operation.Multiply),
+            StringP("/", Operation.Divide)
+        );
+        var operationLine = Pipe(
+            WS.AndR(StringP("Operation: new =")).AndR(WS),
+            operandParser,
+            WS.AndR(operationParser),
+            WS.AndR(operandParser),
+            (_, op1, operation, op2) => (op1, operation, op2)
+        );
+        var testLine = WS.AndR(StringP("Test: divisible by")).AndR(WS).AndR(Int.Map(i => (BigInteger)i));
+        var monkeyTrueLine = WS.AndR(StringP("If true: throw to monkey")).AndR(WS).AndR(Int);
+        var monkeyFalseLine = WS.AndR(StringP("If false: throw to monkey")).AndR(WS).AndR(Int);
+        var monkeyLines = Pipe(
+            monkeyTrueLine.AndL(Newline),
+            monkeyFalseLine,
+            (monkeyTrue, monkeyFalse) => (monkeyTrue, monkeyFalse)
+        );
+        var monkeyParser = Pipe(
+            titleLine.AndL(Newline),
+            itemsLine.AndL(Newline),
+            operationLine.AndL(Newline),
+            testLine.AndL(Newline),
+            monkeyLines,
+            (id, items, operation, divisor, monkeys) =>
+                (id, items, operation, divisor, monkeys)
+        );
 
-    // TODO use FParsec
-    private static Monkey ParseMonkey(string monkey, HashSet<BigInteger> divisors)
-    {
-        var lines = monkey.Split(Environment.NewLine);
-        var index = int.Parse(lines[0].Substring("Monkey ".Length).Trim().TrimEnd(':'));
-        var startingItems = lines[1].Substring("  Starting items: ".Length).Split(", ").Select(BigInteger.Parse).ToArray();
-        var operation = ParseOperation(lines[2].Substring("  Operation: new = ".Length));
-        var testDivisor = int.Parse(lines[3].Substring("  Test: divisible by ".Length));
-        divisors.Add(testDivisor);
-        Func<BigInteger, bool> testOperation = x => x % testDivisor == 0;
-        var trueMonkey = int.Parse(lines[4].Substring("    If true: throw to monkey ".Length));
-        var falseMonkey = int.Parse(lines[5].Substring("    If false: throw to monkey ".Length));
+        var monkeyListParser = Many1(monkeyParser, sep: Many1(Newline), canEndWithSep: true);
+        var result = monkeyListParser.Run(input).GetResult();
 
-        return new Monkey(index,
-            new MonkeyDescription(operation, testOperation, trueMonkey, falseMonkey),
-            startingItems);
-    }
-
-    private static Func<BigInteger, BigInteger> ParseOperation(string operation)
-    {
-        var items = operation.Split(' ');
-        Func<BigInteger, BigInteger, BigInteger> performer = items[1] switch
+        return result.Select(item =>
         {
-            "+" => (a, b) => a + b,
-            "-" => (a, b) => a - b,
-            "*" => (a, b) => a * b,
-            "/" => (a, b) => a / b,
+            var operation = GetOperation(item.operation.operation);
+            var operand1 = GetOperand(item.operation.op1);
+            var operand2 = GetOperand(item.operation.op2);
+
+            var monkeyDescription = new MonkeyDescription(
+                value => operation(operand1(value), operand2(value)),
+                x => x % item.divisor == 0,
+                item.monkeys.monkeyTrue,
+                item.monkeys.monkeyFalse
+            );
+
+            divisors.Add(item.divisor);
+
+            return new Monkey(item.id, monkeyDescription, item.items.Select(i => (BigInteger) i).ToArray());
+        }).ToArray();
+    }
+
+    private static Func<BigInteger, BigInteger> GetOperand(IOperand operand)
+    {
+        return operand switch
+        {
+            OldValue _ => x => x,
+            ConstantValue constantValue => _ => constantValue.Value
         };
-
-        static Func<BigInteger, BigInteger> ParseOperand(string operand)
+    }
+    
+    private static Func<BigInteger, BigInteger, BigInteger> GetOperation(Operation operation)
+    {
+        return operation switch
         {
-            if (operand is "old")
-            {
-                return x => x;
-            }
-
-            var value = int.Parse(operand);
-            return _ => value;
-        }
-
-        var operand1 = ParseOperand(items[0]);
-        var operand2 = ParseOperand(items[2]);
-
-        return x => performer(operand1(x), operand2(x));
+            Operation.Add => (a, b) => a + b,
+            Operation.Subtract=> (a, b) => a - b,
+            Operation.Multiply => (a, b) => a * b,
+            Operation.Divide => (a, b) => a / b,
+        };
     }
 }

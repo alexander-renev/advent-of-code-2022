@@ -133,7 +133,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return Array.Empty<Position>();
+            yield return System.Array.Empty<Position>();
         }
 
         if (col > 0)
@@ -145,7 +145,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return Array.Empty<Position>();
+            yield return System.Array.Empty<Position>();
         }
 
         if (row < rows - 1)
@@ -157,7 +157,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return Array.Empty<Position>();
+            yield return System.Array.Empty<Position>();
         }
 
         if (col < cols - 1)
@@ -169,7 +169,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return Array.Empty<Position>();
+            yield return System.Array.Empty<Position>();
         }
     }
 }

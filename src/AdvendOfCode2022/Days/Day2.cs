@@ -68,47 +68,48 @@ public sealed class Day2 : IDay
 
     private (Figure opponent, Figure me)[] ParseInputForOne(string input)
     {
-        return input.Split(Environment.NewLine)
-            .Select(line =>
-            {
-                var items = line.Split(' ');
-                var opponent = items[0][0] switch
-                {
-                    'A' => Figure.Rock,
-                    'B' => Figure.Paper,
-                    'C' => Figure.Scissors
-                };
-                var me = items[1][0] switch
-                {
-                    'X' => Figure.Rock,
-                    'Y' => Figure.Paper,
-                    'Z' => Figure.Scissors
-                };
+        var parseFigure = Choice(
+            StringP("A", Figure.Rock),
+            StringP("B", Figure.Paper),
+            StringP("C", Figure.Scissors),
+            StringP("X", Figure.Rock),
+            StringP("Y", Figure.Paper),
+            StringP("Z", Figure.Scissors)
+        );
 
-                return (opponent, me);
-            }).ToArray();
+        var parseLine = Pipe(
+            parseFigure,
+            WS,
+            parseFigure, 
+            (c1, _, c2) => (c1, c2));
+
+        var parser = Many(parseLine, sep: Newline, canEndWithSep: true);
+
+        return parser.Run(input).GetResult().ToArray();
     }
 
     private (Figure opponent, Result result)[] ParseInputForTwo(string input)
     {
-        return input.Split(Environment.NewLine)
-            .Select(line =>
-            {
-                var items = line.Split(' ');
-                var opponent = items[0][0] switch
-                {
-                    'A' => Figure.Rock,
-                    'B' => Figure.Paper,
-                    'C' => Figure.Scissors
-                };
-                var result = items[1][0] switch
-                {
-                    'X' => Result.Lose,
-                    'Y' => Result.Draw,
-                    'Z' => Result.Win
-                };
+        var parseFigure = Choice(
+            StringP("A", Figure.Rock),
+            StringP("B", Figure.Paper),
+            StringP("C", Figure.Scissors)
+        );
+        
+        var parseResult = Choice(
+            StringP("X", Result.Lose),
+            StringP("Y", Result.Draw),
+            StringP("Z", Result.Win)
+        );
 
-                return (opponent, result);
-            }).ToArray();
+        var parseLine = Pipe(
+            parseFigure,
+            WS,
+            parseResult, 
+            (c1, _, c2) => (c1, c2));
+
+        var parser = Many(parseLine, sep: Newline, canEndWithSep: true);
+
+        return parser.Run(input).GetResult().ToArray();
     }
 }

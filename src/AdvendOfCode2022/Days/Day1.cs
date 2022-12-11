@@ -1,6 +1,4 @@
-﻿using AdvendOfCode2022.Inputs;
-
-namespace AdvendOfCode2022.Days;
+﻿namespace AdvendOfCode2022.Days;
 
 [Day(1)]
 public sealed class Day1 : IDay
@@ -24,9 +22,9 @@ public sealed class Day1 : IDay
 
     private static long[][] ParseSource(string source)
     {
-        var elves = source.Split(Environment.NewLine + Environment.NewLine);
-        return elves
-            .Select(e => e.Split(Environment.NewLine).Select(long.Parse).ToArray())
-            .ToArray();
+        var longLines = Many(Long, sep: Newline.AndTry(NotFollowedByNewline));
+        var longLineGroups = Many(longLines, sep: Newline.And(Newline));
+        var result = longLineGroups.Run(source);
+        return result.GetResult().Select(r => r.ToArray()).ToArray();
     }
 }

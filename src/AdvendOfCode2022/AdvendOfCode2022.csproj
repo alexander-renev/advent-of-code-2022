@@ -57,6 +57,7 @@
 
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.5.0" />
+      <PackageReference Include="FParsec.CSharp" Version="12.2.0" />
     </ItemGroup>
 
 </Project>

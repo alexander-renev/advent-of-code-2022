@@ -1,6 +1,4 @@
-﻿using Autofac.Core.Lifetime;
-
-namespace AdvendOfCode2022.Days;
+﻿namespace AdvendOfCode2022.Days;
 
 [Day(7)]
 public class Day7 : IDay

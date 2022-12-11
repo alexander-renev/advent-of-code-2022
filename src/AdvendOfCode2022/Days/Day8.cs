@@ -1,7 +1,4 @@
-﻿using System.Collections.Immutable;
-using Autofac.Core.Lifetime;
-
-namespace AdvendOfCode2022.Days;
+﻿namespace AdvendOfCode2022.Days;
 
 [Day(8)]
 public class Day8 : IDay

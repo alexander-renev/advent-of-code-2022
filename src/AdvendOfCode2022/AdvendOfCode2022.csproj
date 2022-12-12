@@ -5,6 +5,7 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>disable</Nullable>
+	    <RunAnalyzersDuringLiveAnalysis>false</RunAnalyzersDuringLiveAnalysis>
     </PropertyGroup>
 
     <ItemGroup>
@@ -34,6 +35,8 @@
       <EmbeddedResource Include="Inputs\day10-test.txt" />
       <EmbeddedResource Include="Inputs\day11-real.txt" />
       <EmbeddedResource Include="Inputs\day11-test.txt" />
+      <EmbeddedResource Include="Inputs\day12-real.txt" />
+      <EmbeddedResource Include="Inputs\day12-test.txt" />
       <EmbeddedResource Include="Inputs\day5-real.txt" />
       <EmbeddedResource Include="Inputs\day6-real.txt" />
       <EmbeddedResource Include="Inputs\day7-real.txt" />

@@ -27,4 +27,3 @@ solver.CalculateTaskTwo(realData);
 sw.Stop();
 Console.WriteLine($"Day {day} completed in {sw.Elapsed}");
 
-Console.ReadLine();

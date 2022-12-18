@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "AdventOfCode": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "AOC_DAY": "16"
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
     "AdventOfCode": {
       "commandName": "Project",
       "environmentVariables": {
-        "AOC_DAY": "16"
+        "AOC_DAY": "17"
       }
     }
   }

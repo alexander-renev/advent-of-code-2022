@@ -1,5 +1,7 @@
 ﻿namespace AdventOfCode2022.Days;
 
+using static System.Array;
+
 [Day(8)]
 public class Day8 : IDay
 {
@@ -145,7 +147,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return System.Array.Empty<Position>();
+            yield return Empty<Position>();
         }
 
         if (row < rows - 1)
@@ -157,7 +159,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return System.Array.Empty<Position>();
+            yield return Empty<Position>();
         }
 
         if (col < cols - 1)
@@ -169,7 +171,7 @@ public class Day8 : IDay
         }
         else
         {
-            yield return System.Array.Empty<Position>();
+            yield return Empty<Position>();
         }
     }
 }

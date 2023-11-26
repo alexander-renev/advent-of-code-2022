@@ -1,4 +1,6 @@
-﻿namespace AdventOfCode2022.Days;
+﻿using System.ComponentModel;
+
+namespace AdventOfCode2022.Days;
 
 [Day(17)]
 public class Day17 : IDay
@@ -42,7 +44,6 @@ public class Day17 : IDay
         var data = Take(GetFigures(), steps);
         var directionsEnumerator = directions.GetEnumerator();
         long bottom = 0;
-        var columns = 7;
         var listLength = 30;
         var staticPoints = Enumerable.Range(0, 7).ToDictionary(i => (long)i, _ => new LinkedList<long>());
         bool CheckCondition(Point pt) => pt.Column is >= 0 and < 7 && pt.Row > 0 && !staticPoints[pt.Column].Contains(pt.Row);
@@ -57,6 +58,7 @@ public class Day17 : IDay
                 {
                     Direction.Left => currentFigure.Move(0, -1, CheckCondition).result,
                     Direction.Right => currentFigure.Move(0, 1, CheckCondition).result,
+                    _ => throw new InvalidEnumArgumentException(nameof(direction), (int)direction, typeof(Direction)),
                 };
 
                 var (downResult, downPosition) = currentFigure.Move(-1, 0, CheckCondition);

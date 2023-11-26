@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace AdventOfCode2022.Days;
 
@@ -36,92 +35,87 @@ public class Day15 : IDay
     public void CalculateTaskOne(string source)
     {
         var (y, _,  sensors) = ParseInput(source);
-        var beacons = sensors.Select(s => s.Closest).ToHashSet();
-        var result = new ConcurrentBag<Point>();
 
-        var maxCoords = new[]
+        var ranges = sensors.Select(sensor =>
         {
-            sensors.Max(s => s.Position.X),
-            sensors.Max(s => s.Position.Y),
-            sensors.Max(s => s.Closest.X),
-            sensors.Max(s => s.Closest.Y),
-        }.Max() * 10;
-        
-        Parallel.For(
-            0,
-            maxCoords,
-            new ParallelOptions { MaxDegreeOfParallelism = 32},
-            i =>
+            var distance = sensor.Distance;
+            var yDelta = Math.Abs(y - sensor.Position.Y);
+            if (yDelta > distance)
             {
-                Span<Point> pts = stackalloc Point[2];
-                pts[0] = new Point(i, y);
-                pts[1] = new Point(-i, y);
+                return (Pair?) null;
+            }
 
-                foreach (ref var pt in pts)
-                {
-                    if (!beacons.Contains(pt) && IsCloseToAny(pt, sensors))
-                    {
-                        result.Add(pt);
-                    }    
-                }
-            });
+            var xDelta = distance - yDelta;
+            var x = sensor.Position.X;
+            return new Pair(x - xDelta, x + xDelta);
+        }).ToArray();
+
+        var total = ranges.Aggregate((r1, r2) =>
+        {
+            if (r1 is null)
+            {
+                return r2;
+            }
+
+            if (r2 is null)
+            {
+                return r1;
+            }
+
+            return new Pair(Math.Min(r1.Value.From, r2.Value.From),
+                Math.Max(r1.Value.To, r2.Value.To));
+        });
+
+        if (total is null)
+        {
+            Console.WriteLine("0");
+            return;
+        }
         
-        Console.WriteLine(result.Count);
+        Console.WriteLine(total.Value.To - total.Value.From);
     }
 
     public void CalculateTaskTwo(string source)
     {
-        var (y, limit, sensors) = ParseInput(source);
-        var beacons = sensors.Select(s => s.Closest).ToHashSet();
+        var (_, limit, sensors) = ParseInput(source);
         Point? result = null;
 
-        Parallel.For(0,
-            limit + 1,
-            new ParallelOptions { MaxDegreeOfParallelism = 16},
-            (y, state) =>
+        var point = new Point(0, 0);
+        while (true)
+        {
+            var failingSensor = sensors.Where(s => s.Position.DistanceTo(point) <= s.Distance)
+                .Select(s => (Sensor?)s)
+                .FirstOrDefault();
+            
+            if (failingSensor is null)
             {
-                var ranges = sensors.Select(sensor =>
-                {
-                    var heightDifference = Math.Abs(sensor.Position.Y - y);
-                    if (heightDifference > sensor.Distance)
-                    {
-                        return (Pair?) null;
-                    }
+                result = point;
+                break;
+            }
 
-                    var horizontalDifference = sensor.Distance - heightDifference;
-                    return new Pair(Math.Max(sensor.Position.X - horizontalDifference, 0), Math.Min(sensor.Position.X + horizontalDifference, limit));
-                }).Where(s => s.HasValue).Select(s => s.Value).OrderBy(p => p.From);
+            var sensor = failingSensor.Value;
+            
+            // move right so this sensor won't see us
+            point = point with {X = sensor.Position.X + (sensor.Distance - Math.Abs(sensor.Position.Y - point.Y) + 1)};
+            if (point.X > limit)
+            {
+                point = new Point(0, point.Y + 1);
+            }
 
-                var rangesList = new LinkedList<Pair>(ranges);
-
-                var x = 0;
-                var found = false;
-                while (x <= limit)
-                {
-                    if (rangesList.Count == 0)
-                    {
-                        found = true;
-                        break;
-                    }
-
-                    var range = rangesList.First.Value;
-                    if (x >= range.From && x <= range.To)
-                    {
-                        x = range.To + 1;
-                        continue;
-                    }
-                    rangesList.RemoveFirst();
-                }
-
-                if (found)
-                {
-                    result = new Point(x, y);
-                    state.Break();
-                }
-            });
-
-        var value = (long) result.Value.X * 4000000 + result.Value.Y;
-        Console.WriteLine($"{result.Value} ({value})");
+            if (point.Y > limit)
+            {
+                break;
+            }
+        }
+        
+        if (result is not null)
+        {
+            Console.WriteLine(result.Value.X * 4000000L + result.Value.Y);
+        }
+        else
+        {
+            Console.WriteLine("Not found");
+        }
     }
 
     private static (int y, int limit, Sensor[] Sensors) ParseInput(string input)

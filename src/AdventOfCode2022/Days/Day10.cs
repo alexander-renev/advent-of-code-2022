@@ -1,7 +1,4 @@
-﻿using System.ComponentModel;
-using System.Linq;
-
-namespace AdventOfCode2022.Days;
+﻿namespace AdventOfCode2022.Days;
 
 [Day(10)]
 public class Day10 : IDay
@@ -10,7 +7,7 @@ public class Day10 : IDay
     {
     }
 
-    private record Noop() : ICommand
+    private record Noop : ICommand
     {
     }
 

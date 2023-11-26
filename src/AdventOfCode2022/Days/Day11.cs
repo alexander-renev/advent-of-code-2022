@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.ComponentModel;
+using System.Numerics;
 
 namespace AdventOfCode2022.Days;
 
@@ -174,8 +175,9 @@ public class Day11 : IDay
     {
         return operand switch
         {
-            OldValue _ => x => x,
-            ConstantValue constantValue => _ => constantValue.Value
+            OldValue => x => x,
+            ConstantValue constantValue => _ => constantValue.Value,
+            _ => throw new InvalidOperationException($"Unsupported operand type {operand?.GetType()?.FullName}"),
         };
     }
     
@@ -187,6 +189,7 @@ public class Day11 : IDay
             Operation.Subtract=> (a, b) => a - b,
             Operation.Multiply => (a, b) => a * b,
             Operation.Divide => (a, b) => a / b,
+            _ => throw new InvalidEnumArgumentException(nameof(operation), (int)operation, typeof(Operation)),
         };
     }
 }

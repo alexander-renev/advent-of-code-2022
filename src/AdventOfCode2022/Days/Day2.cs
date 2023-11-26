@@ -1,4 +1,6 @@
-﻿namespace AdventOfCode2022.Days;
+﻿using System.ComponentModel;
+
+namespace AdventOfCode2022.Days;
 
 [Day(2)]
 public sealed class Day2 : IDay
@@ -57,7 +59,8 @@ public sealed class Day2 : IDay
             {
                 Result.Draw => opponent,
                 Result.Win => LosersOf[opponent],
-                Result.Lose => WinnersOf[opponent]
+                Result.Lose => WinnersOf[opponent],
+                _ => throw new InvalidEnumArgumentException(nameof(result), (int)result, typeof(Result)),
             };
             var points = (int)me + (int)result;
             return points;

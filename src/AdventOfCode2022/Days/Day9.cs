@@ -89,7 +89,8 @@ public class Day9 : IDay
                     'U' => Direction.Up,
                     'D' => Direction.Down,
                     'L' => Direction.Left,
-                    'R' => Direction.Right
+                    'R' => Direction.Right,
+                    _   => throw new InvalidOperationException($"Unsupported characted \"{line[0]}\""),
                 };
 
                 var count = int.Parse(line.Substring(2));

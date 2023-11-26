@@ -19,7 +19,7 @@ public class Day13 : IDay
         }
     }
 
-    private sealed record ListElement(IElement[] Elements) : IElement
+    private sealed record ListElement(params IElement[] Elements) : IElement
     {
         public override string ToString()
         {
@@ -47,8 +47,8 @@ public class Day13 : IDay
     public void CalculateTaskTwo(string source)
     {
         var data = ParseInput(source).SelectMany(s => new[] {s.el1, s.el2}).ToList();
-        var div1 = new ListElement(new[] {new ListElement(new[] {new NumberElement(2)})});
-        var div2 = new ListElement(new[] {new ListElement(new[] {new NumberElement(6)})});
+        var div1 = new ListElement(new ListElement(new NumberElement(2)));
+        var div2 = new ListElement(new ListElement(new NumberElement(6)));
         data.Add(div1);
         data.Add(div2);
 
@@ -77,9 +77,9 @@ public class Day13 : IDay
                 when num1.Value > num2.Value => false,
             
             (NumberElement num1, ListElement lst1)
-                => IsLowerThan(new ListElement(new[] {num1}), lst1),
+                => IsLowerThan(new ListElement(num1), lst1),
             (ListElement lst1, NumberElement num1)
-                => IsLowerThan(lst1, new ListElement(new[] {num1})),
+                => IsLowerThan(lst1, new ListElement(num1)),
             
             (ListElement { Elements: []}, ListElement{ Elements: []}) => null,
             (ListElement { Elements: [..]}, ListElement{ Elements: []}) => false,
@@ -88,7 +88,9 @@ public class Day13 : IDay
             (
                 ListElement { Elements: [var el1, .. var rest1 ]},
                 ListElement { Elements: [var el2, .. var rest2] }
-            ) => IsLowerThan(el1, el2) ?? IsLowerThan(new ListElement(rest1), new ListElement(rest2)) 
+            ) => IsLowerThan(el1, el2) ?? IsLowerThan(new ListElement(rest1), new ListElement(rest2)),
+            
+            _ => throw new InvalidOperationException("No switch case matched"),
         };
     }
 

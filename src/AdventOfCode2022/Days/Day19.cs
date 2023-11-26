@@ -1,4 +1,6 @@
-﻿namespace AdventOfCode2022.Days;
+﻿using System.Collections.Immutable;
+
+namespace AdventOfCode2022.Days;
 
 [Day(19)]
 public class Day19 : IDay
@@ -11,6 +13,11 @@ public class Day19 : IDay
         Obsidian,
         Geode
     }
+    
+    private static ImmutableList<ResourceType> ResourceTypes = ImmutableList<ResourceType>.Empty.AddRange(new[]
+    {
+        ResourceType.Geode, ResourceType.Clay, ResourceType.Obsidian, ResourceType.Ore
+    });
 
     private record struct PriceValue(ResourceType Resource, int Value);
 
@@ -22,135 +29,115 @@ public class Day19 : IDay
     }
 
     private readonly record struct Step(
-        Dictionary<ResourceType, int> Resources,
-        Dictionary<ResourceType, int> Robots,
-        int Elapsed)
-    {
-        public override string ToString()
-        {
-            var res = string.Join(",", Resources.OrderBy(r => (int)r.Key).Select(r => r.Value));
-            var rob = string.Join(",", Robots.OrderBy(r => (int)r.Key).Select(r => r.Value));
-            return $"Res={res};rob={rob};time={Elapsed}";
-        }
-    }
+        ImmutableDictionary<ResourceType, int> Resources,
+        ImmutableDictionary<ResourceType, int> Robots,
+        int Elapsed,
+        ImmutableList<ResourceType> CanBuildLastStep);
+
+    private static readonly ImmutableDictionary<ResourceType, int> InitialResource =
+        ImmutableDictionary<ResourceType, int>.Empty.AddRange(ResourceTypes.ToDictionary(t => t, _ => 0));
+    
+    private static readonly ImmutableDictionary<ResourceType, int> InitialRobots =
+        ImmutableDictionary<ResourceType, int>.Empty
+            .AddRange(ResourceTypes.ToDictionary(t => t, _ => 0))
+            .SetItem(ResourceType.Ore, 1);
     
 
     public void CalculateTaskOne(string source)
     {
         var blueprints = ParseInput(source);
-        var total = blueprints.Select(GetQuality).Sum();
+        var total = blueprints.Select(bp => GetMaxGeodes(bp, 24) * bp.Number).Sum();
         
         Console.WriteLine($"Total = {total}");
     }
 
     public void CalculateTaskTwo(string source)
     {
+        var blueprints = ParseInput(source);
+        var product = blueprints.Take(3).Select(bp => GetMaxGeodes(bp, 32)).Aggregate(1L, (a, b) => a * b);
+        Console.WriteLine($"Total = {product}");
     }
 
-    private static int GetQuality(Blueprint bp)
+    private static int GetMaxGeodes(Blueprint bp, int time)
     {
-        var resourceTypes = new[] {ResourceType.Geode, ResourceType.Obsidian, ResourceType.Clay, ResourceType.Ore};
-        // We cannot build multiple robots simultaneously so max resource production required for all resources except geode
-        // is defined by maximum price of robot in this resource
-        var maxRobots = new[] {ResourceType.Ore, ResourceType.Clay, ResourceType.Obsidian}
-            .ToDictionary(t => t, t => bp.Robots.SelectMany(r => r.Price).Where(p => p.Resource == t).Max(p => p.Value) + 5);
-        maxRobots[ResourceType.Geode] = int.MaxValue;
-
-        var robots = MakeEmpty();
-        robots[ResourceType.Ore] = 1;
-        var resources = MakeEmpty();
-
-        var stateGraph = new LinkedList<Step>();
-        stateGraph.AddLast(new Step(resources, robots, 0));
-        var visited = new HashSet<string>();
-        
-        const int maxTime = 24;
+        var queue = new Queue<Step>();
+        queue.Enqueue(new Step(InitialResource, InitialRobots, 0, ImmutableList<ResourceType>.Empty));
         var maxCracked = 0;
 
-        while (stateGraph.Any())
+        var maxPrice = new[] {ResourceType.Ore, ResourceType.Clay, ResourceType.Obsidian}
+            .ToDictionary(res => res,
+                res => bp.Robots.Select(r => r.Price.Where(p => p.Resource == res).Select(p => p.Value).FirstOrDefault()).Max());
+        maxPrice[ResourceType.Geode] = int.MaxValue;
+
+        while (true)
         {
-            var state = stateGraph.First.Value;
-            stateGraph.RemoveFirst();
-
-            var expectedCracked = state.Resources[ResourceType.Geode] + (maxTime - state.Elapsed) * state.Robots[ResourceType.Geode];
-            maxCracked = Math.Max(expectedCracked, maxCracked);
-
-            // Trying to build another robot
-            foreach (var resourceType in resourceTypes)
+            if (!queue.TryDequeue(out var element))
             {
-                var count = state.Robots[resourceType];
-                if (count == maxRobots[resourceType])
+                break;
+            }
+
+            if (element.Elapsed == time)
+            {
+                maxCracked = Math.Max(maxCracked, element.Resources[ResourceType.Geode]);
+                continue;
+            }
+
+            // Calculate resources
+            var newResources = element.Resources;
+            foreach (var type in ResourceTypes)
+            {
+                if (element.Robots[type] > 0)
+                {
+                    newResources = newResources.SetItem(type, newResources[type] + element.Robots[type]);
+                }
+            }
+
+            var timeRemaining = time - element.Elapsed;
+            var canBuildThisStep = element.CanBuildLastStep; 
+            
+            foreach (var resource in ResourceTypes.Where(r => !element.CanBuildLastStep.Contains(r)))
+            {
+                // can we build this robot
+                var price = bp.RobotsByType[resource];
+                if (!price.Price.All(p => p.Value <= element.Resources[p.Resource]))
                 {
                     continue;
                 }
 
-                /*if (state.Resources[resourceType] > 15 && resourceType is not ResourceType.Ore)
+                if (resource != ResourceType.Geode)
                 {
-                    continue;
-                }*/
+                    // can we use all resources of specified type
+                    var currentResourceValue = newResources[resource];
+                    var currentRobotsCount = element.Robots[resource];
+                    if (currentResourceValue + currentRobotsCount * timeRemaining >= maxPrice[resource] * timeRemaining)
+                    {
+                        continue;
+                    }
+                }
+
+                var resourcesAfterBuild = newResources;
+                foreach (var item in price.Price)
+                {
+                    resourcesAfterBuild = resourcesAfterBuild.SetItem(item.Resource, resourcesAfterBuild[item.Resource] - item.Value);
+                }
+
+                var robotsAfterBuild = element.Robots.SetItem(resource, element.Robots[resource] + 1);
                 
-                var price = bp.RobotsByType[resourceType].Price;
-                var canBuild = price.All(p => state.Robots[p.Resource] > 0);
-                if (!canBuild)
-                {
-                    continue;
-                }
+                queue.Enqueue(new Step(resourcesAfterBuild, robotsAfterBuild, element.Elapsed + 1, ImmutableList<ResourceType>.Empty));
+                canBuildThisStep = canBuildThisStep.Add(resource);
 
-                var requiredTime = price
-                    .Select(p => CalculateTime(
-                        state.Resources[p.Resource],
-                        p.Value,
-                        state.Robots[p.Resource]))
-                    .Max() + 1;
-
-                if (state.Elapsed + requiredTime > maxTime)
+                if (resource == ResourceType.Geode)
                 {
-                    continue;
-                }
-                // Need time to get resources + 1 minute to build robot.
-                var newResources = state.Resources
-                    .ToDictionary(r => r.Key, r => r.Value + state.Robots[r.Key] * requiredTime);
-                foreach (var item in price)
-                {
-                    newResources[item.Resource] -= item.Value;
-                }
-
-                var newRobots = state.Robots.ToDictionary(r => r.Key, r => r.Value);
-                newRobots[resourceType] += 1;
-
-                var newStep = new Step(newResources, newRobots, state.Elapsed + requiredTime);
-                if (visited.Add(newStep.ToString()))
-                {
-                    stateGraph.AddLast(newStep);
+                    break;
                 }
             }
+
+            queue.Enqueue(new Step(newResources, element.Robots, element.Elapsed + 1, canBuildThisStep));
         }
-
-        Console.WriteLine($"Blueprint {bp.Number} result {maxCracked}");
-        return maxCracked * bp.Number;
-
-        static Dictionary<ResourceType, int> MakeEmpty()
-        {
-            return new Dictionary<ResourceType, int>
-            {
-                {ResourceType.Clay, 0},
-                {ResourceType.Geode, 0},
-                {ResourceType.Obsidian, 0},
-                {ResourceType.Ore, 0}
-            };
-        }
-
-        static int CalculateTime(int startResource, int requiredResource, int income)
-        {
-            var result = 0;
-            while (startResource < requiredResource)
-            {
-                result++;
-                startResource += income;
-            }
-
-            return result;
-        }
+        
+        Console.WriteLine($"BP {bp.Number} max {maxCracked}");
+        
+        return maxCracked;
     }
 
     private static Blueprint[] ParseInput(string source)
@@ -175,7 +162,7 @@ public class Day19 : IDay
             resourceType.AndL(WS),
             StringP("robot costs").AndL(WS),
             prices.AndL(StringP(".")),
-            (_, type, _, prices) => new Robot(type, prices.ToArray())
+            (_, type, _, p) => new Robot(type, p.ToArray())
         );
         
         var line = Pipe(

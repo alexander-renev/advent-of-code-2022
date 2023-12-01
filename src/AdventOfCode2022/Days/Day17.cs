@@ -5,14 +5,13 @@ namespace AdventOfCode2022.Days;
 [Day(17)]
 public class Day17 : IDay
 {
-    public enum Direction
+    private enum Direction
     {
         Left,
         Right
     }
 
-    private static readonly Point[][] Figures = new[]
-    {
+    private static readonly Point[][] Figures = {
         new[] {new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(0, 3)},
         new[] {new Point(1, 0), new Point(0, 1), new Point(1, 1), new Point(2, 1), new Point(1, 2)},
         new [] { new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(1, 2), new Point(2, 2) },
@@ -20,7 +19,7 @@ public class Day17 : IDay
         new[] { new Point(0, 0), new Point(1, 0), new Point(0, 1), new Point(1, 1)}
     };
 
-    public readonly record struct Point(long Row, long Column)
+    private readonly record struct Point(long Row, long Column)
     {
         public Point Move(long deltaRow, long deltaColumn)
         {
@@ -35,33 +34,36 @@ public class Day17 : IDay
 
     public void CalculateTaskTwo(string source)
     {
-        //Calculate(source, 1000000000000);
+        Calculate(source, 1000000000000);
     }
 
     private void Calculate(string source, long steps)
     {
         var directions = ParseInput(source);
         var data = Take(GetFigures(), steps);
-        var directionsEnumerator = directions.GetEnumerator();
+        using var directionsEnumerator = directions.GetEnumerator();
         long bottom = 0;
         var listLength = 30;
         var staticPoints = Enumerable.Range(0, 7).ToDictionary(i => (long)i, _ => new LinkedList<long>());
         bool CheckCondition(Point pt) => pt.Column is >= 0 and < 7 && pt.Row > 0 && !staticPoints[pt.Column].Contains(pt.Row);
+        var history = new Dictionary<string, List<(long height, long steps)>>();
+        var step = 0L;
         foreach (var figure in data)
         {
-            var currentFigure = figure.Move(bottom + 4, 2, CheckCondition).result;
+            step++;
+            var currentFigure = Move(figure, bottom + 4, 2, CheckCondition).result;
             while (true)
             {
                 directionsEnumerator.MoveNext();
                 var direction = directionsEnumerator.Current;
                 currentFigure = direction switch
                 {
-                    Direction.Left => currentFigure.Move(0, -1, CheckCondition).result,
-                    Direction.Right => currentFigure.Move(0, 1, CheckCondition).result,
+                    Direction.Left => Move(currentFigure, 0, -1, CheckCondition).result,
+                    Direction.Right => Move(currentFigure, 0, 1, CheckCondition).result,
                     _ => throw new InvalidEnumArgumentException(nameof(direction), (int)direction, typeof(Direction)),
                 };
 
-                var (downResult, downPosition) = currentFigure.Move(-1, 0, CheckCondition);
+                var (downResult, downPosition) = Move(currentFigure, -1, 0, CheckCondition);
                 if (!downResult)
                 {
                     foreach (var item in currentFigure)
@@ -69,7 +71,7 @@ public class Day17 : IDay
                         var col = staticPoints[item.Column];
                         if (!col.Contains(item.Row))
                         {
-                            col.AddLast(item.Row);
+                            col.AddLast((long) item.Row);
                         }
                     }
 
@@ -88,9 +90,32 @@ public class Day17 : IDay
             }
 
             bottom = staticPoints.Values.SelectMany(v => v).Max();
+            var description = Describe(staticPoints, 16);
+            history.TryAdd(description, new ());
+            history[description].Add((bottom, step));
+            if (step > 100000)
+            {
+                break;
+            }
+        }
+
+        if (step == steps)
+        {
+            Console.WriteLine($"Height is {bottom}");
+            return;
         }
         
-        Console.WriteLine($"Height is {bottom}");
+
+        var historyItem = history.Values.First(v => v.Count > 10 && v[^1].height != v[^2].height);
+        var period = historyItem[^1].steps - historyItem[^2].steps;
+        var remainder = steps % period;
+
+        var foundItem = history.Values.Where(v => v.Count > 10).First(v => v.Last().steps % period == remainder);
+        
+        var difference = foundItem[^1].height - foundItem[^2].height;
+        var height = foundItem[^1].height + (steps - foundItem[^1].steps) / period * difference;
+            
+        Console.WriteLine($"Height is {height}");
     }
 
     private static IEnumerable<Direction> ParseInput(string input)
@@ -131,11 +156,8 @@ public class Day17 : IDay
             }
         }
     }
-}
 
-file static class FigureExtensions
-{
-    public static (bool success, Day17.Point[] result) Move(this Day17.Point[] figure, long deltaRow, long deltaColumn,
+    private static (bool success, Point[] result) Move(Point[] figure, long deltaRow, long deltaColumn,
         Func<Day17.Point, bool> checkCondition)
     {
         var result = System.Array.ConvertAll(figure, pt => pt.Move(deltaRow, deltaColumn));
@@ -145,5 +167,15 @@ file static class FigureExtensions
         }
 
         return (false, figure);
+    }
+
+    private static string Describe(Dictionary<long, LinkedList<long>> points, int height)
+    {
+        var maxHeight = points.Values.SelectMany(v => v).Max();
+        var strings = Enumerable.Range(0, height)
+            .Select(i => maxHeight - i)
+            .Select(y => new string(Enumerable.Range(0, 7).Select(x => points[x].Contains(y) ? 'x' : ' ').ToArray()))
+            .ToArray();
+        return string.Join(Environment.NewLine, strings);
     }
 }

@@ -14,9 +14,9 @@ public class Day19 : IDay
         Geode
     }
     
-    private static ImmutableList<ResourceType> ResourceTypes = ImmutableList<ResourceType>.Empty.AddRange(new[]
+    private static  readonly ImmutableList<ResourceType> ResourceTypes = ImmutableList<ResourceType>.Empty.AddRange(new[]
     {
-        ResourceType.Geode, ResourceType.Clay, ResourceType.Obsidian, ResourceType.Ore
+        ResourceType.Geode, ResourceType.Obsidian, ResourceType.Clay, ResourceType.Ore
     });
 
     private record struct PriceValue(ResourceType Resource, int Value);
@@ -31,8 +31,7 @@ public class Day19 : IDay
     private readonly record struct Step(
         ImmutableDictionary<ResourceType, int> Resources,
         ImmutableDictionary<ResourceType, int> Robots,
-        int Elapsed,
-        ImmutableList<ResourceType> CanBuildLastStep);
+        int Elapsed);
 
     private static readonly ImmutableDictionary<ResourceType, int> InitialResource =
         ImmutableDictionary<ResourceType, int>.Empty.AddRange(ResourceTypes.ToDictionary(t => t, _ => 0));
@@ -60,82 +59,101 @@ public class Day19 : IDay
 
     private static int GetMaxGeodes(Blueprint bp, int time)
     {
-        var queue = new Queue<Step>();
-        queue.Enqueue(new Step(InitialResource, InitialRobots, 0, ImmutableList<ResourceType>.Empty));
         var maxCracked = 0;
-
         var maxPrice = new[] {ResourceType.Ore, ResourceType.Clay, ResourceType.Obsidian}
             .ToDictionary(res => res,
                 res => bp.Robots.Select(r => r.Price.Where(p => p.Resource == res).Select(p => p.Value).FirstOrDefault()).Max());
         maxPrice[ResourceType.Geode] = int.MaxValue;
 
-        while (true)
+        var s = new Step(InitialResource, InitialRobots, 0);
+
+        void GetMaxCracked(Step step)
         {
-            if (!queue.TryDequeue(out var element))
+            maxCracked  = Math.Max(maxCracked, step.Resources[ResourceType.Geode] +
+                                        step.Robots[ResourceType.Geode] * (time - step.Elapsed));
+
+            // Is we build Geode every next step how much can we produce
+            var limitCracked = step.Resources[ResourceType.Geode] +
+                               step.Robots[ResourceType.Geode] * (time - step.Elapsed) +
+                               Enumerable.Range(0, time - step.Elapsed).Sum();
+            if (limitCracked <= maxCracked)
             {
-                break;
+                return;
             }
 
-            if (element.Elapsed == time)
+            if (step.Elapsed == time - 1)
             {
-                maxCracked = Math.Max(maxCracked, element.Resources[ResourceType.Geode]);
-                continue;
+                return;
             }
 
-            // Calculate resources
-            var newResources = element.Resources;
-            foreach (var type in ResourceTypes)
-            {
-                if (element.Robots[type] > 0)
-                {
-                    newResources = newResources.SetItem(type, newResources[type] + element.Robots[type]);
-                }
-            }
 
-            var timeRemaining = time - element.Elapsed;
-            var canBuildThisStep = element.CanBuildLastStep; 
-            
-            foreach (var resource in ResourceTypes.Where(r => !element.CanBuildLastStep.Contains(r)))
+            foreach (var resourceType in ResourceTypes)
             {
-                // can we build this robot
-                var price = bp.RobotsByType[resource];
-                if (!price.Price.All(p => p.Value <= element.Resources[p.Resource]))
-                {
-                    continue;
-                }
-
-                if (resource != ResourceType.Geode)
+                if (resourceType != ResourceType.Geode)
                 {
                     // can we use all resources of specified type
-                    var currentResourceValue = newResources[resource];
-                    var currentRobotsCount = element.Robots[resource];
-                    if (currentResourceValue + currentRobotsCount * timeRemaining >= maxPrice[resource] * timeRemaining)
+                    var currentResourceValue = step.Resources[resourceType];
+                    var currentRobotsCount = step.Robots[resourceType];
+                    if (currentResourceValue + currentRobotsCount * (time - step.Elapsed) >= maxPrice[resourceType] * (time - step.Elapsed))
                     {
                         continue;
                     }
                 }
-
-                var resourcesAfterBuild = newResources;
-                foreach (var item in price.Price)
-                {
-                    resourcesAfterBuild = resourcesAfterBuild.SetItem(item.Resource, resourcesAfterBuild[item.Resource] - item.Value);
-                }
-
-                var robotsAfterBuild = element.Robots.SetItem(resource, element.Robots[resource] + 1);
                 
-                queue.Enqueue(new Step(resourcesAfterBuild, robotsAfterBuild, element.Elapsed + 1, ImmutableList<ResourceType>.Empty));
-                canBuildThisStep = canBuildThisStep.Add(resource);
-
-                if (resource == ResourceType.Geode)
+                
+                // Can we build this robot now or in future
+                var price = bp.RobotsByType[resourceType];
+                if (!price.Price.All(p => step.Robots[p.Resource] > 0))
                 {
-                    break;
+                    continue;
                 }
-            }
 
-            queue.Enqueue(new Step(newResources, element.Robots, element.Elapsed + 1, canBuildThisStep));
+                // Calculate required time 
+                var maxTime = price.Price
+                    .Select(p =>
+                    {
+                        if (step.Resources[p.Resource] >= p.Value)
+                        {
+                            return 0;
+                        }
+
+                        decimal difference = p.Value - step.Resources[p.Resource];
+                        return (int) Math.Ceiling(difference / step.Robots[p.Resource]);
+                    })
+                    .Max() + 1;
+
+                if (maxTime + step.Elapsed > time - 1)
+                {
+                    continue;
+                }
+
+                var newResources = step.Resources;
+                foreach (var r in ResourceTypes)
+                {
+                    if (step.Robots[r] == 0)
+                    {
+                        continue;
+                    }
+
+                    newResources = newResources.SetItem(r, newResources[r] + step.Robots[r] * maxTime);
+                }
+
+                foreach (var priceItem in price.Price)
+                {
+                    newResources = newResources.SetItem(priceItem.Resource,
+                        newResources[priceItem.Resource] - priceItem.Value);
+                }
+
+                var newRobots = step.Robots.SetItem(resourceType, step.Robots[resourceType] + 1);
+                var newElapsed = step.Elapsed + maxTime;
+
+                maxCracked = Math.Max(maxCracked, newResources[ResourceType.Geode]);
+                
+                GetMaxCracked(new Step(newResources, newRobots, newElapsed));
+            }
         }
-        
-        Console.WriteLine($"BP {bp.Number} max {maxCracked}");
+
+        GetMaxCracked(s);
         
         return maxCracked;
     }

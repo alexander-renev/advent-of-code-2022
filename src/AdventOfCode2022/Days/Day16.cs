@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
-using System.Collections.Immutable;
-using AdventOfCode2022.Helpers;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+using LanguageExt;
 
 namespace AdventOfCode2022.Days;
 
@@ -9,160 +9,206 @@ public class Day16 : IDay
 {
     private record Valve(string Id, long FlowRate, string[] Valves);
 
-    private record Step(string Position, HashSet<string> Opened, long Pressure);
+    private record Step(string Position, ImmutableHashSet<string> Opened, long Pressure, int Elapsed);
+    
+    private record StepWithElephant(string Position, string ElephantPosition, ImmutableDictionary<string, int> Opened, int Elapsed, int ElephantElapsed);
 
-    private record StepWithElefant(string Position, string ElefantPosition, ImmutableHashSet<string> Opened,
-        long TotalPressure)
-    {
-        public string SortValue { get; } =
-            $"{string.Join(";", Opened.Order())}_{(StringComparer.Ordinal.Compare(Position, ElefantPosition) > 0 ? Position + ElefantPosition : ElefantPosition + Position)}_{TotalPressure}";
-    }
+    private record Pair(string V1, string V2);
 
     public void CalculateTaskOne(string source)
     {
-        var valves = ParseInput(source).ToDictionary(v => v.Id);
+        var valvesList = ParseInput(source);
+        var valvesMap = valvesList.ToDictionary(v => v.Id);
+        var nonZeroValves = valvesList.Where(v => v.FlowRate > 0).Select(v => v.Id).ToHashSet();
+        var distances = CalculateDistances(valvesList);
 
-        var first = new[] {new Step("AA", new HashSet<string>(), 0)};
-        var nonZero = valves.Where(v => v.Value.FlowRate > 0).Select(v => v.Key).Count();
-        var allFlowRate = valves.Values.Sum(v => v.FlowRate);
-        var current = first.ToList();
+        var step = new Step("AA", ImmutableHashSet<string>.Empty, 0, 0);
 
-        var progress = ProgressHelper.Create(30);
-        foreach (var i in Enumerable.Range(0, 30))
+        var maxPressure = 0L;
+        var time = 30;
+
+        void Process(Step step)
         {
-            var result = new ConcurrentBag<Step>();
-
-            Parallel.ForEach(current,
-                new ParallelOptions { MaxDegreeOfParallelism = 16},
-                (item, state) =>
+            var currentSpeed = step.Opened.Select(op => valvesMap[op].FlowRate).Sum();
+            
+            // Do nothing
+            var newPressure = step.Pressure + currentSpeed * (time - step.Elapsed);
+            maxPressure = Math.Max(maxPressure, newPressure);
+            
+            foreach (var newValve in nonZeroValves.Where(v => !step.Opened.Contains(v)))
+            {
+                var distance = distances[(step.Position, newValve)] + 1;
+                if (step.Elapsed + distance >= time)
                 {
-                    if (item.Opened.Count == nonZero)
-                    {
-                        result.Add(item with {Pressure = item.Pressure + allFlowRate});
-                        return;
-                    }
+                    continue;
+                }
 
-                    var pipe = valves[item.Position];
-                    var newPressure = item.Pressure + item.Opened.Select(s => valves[s].FlowRate).Sum();
-                    if (!item.Opened.Contains(item.Position) && pipe.FlowRate > 0)
-                    {
-                        // We can open
-                        var newOpened = new HashSet<string>(item.Opened) {item.Position};
-                        result.Add(item with {Opened = newOpened, Pressure = newPressure});
-                    }
-
-                    foreach (var connected in pipe.Valves)
-                    {
-                        result.Add(new (connected, item.Opened, newPressure));
-                    }
-                });
-
-            var count = result.Count;
-            var optimized = result
-                .OrderByDescending(r => r.Pressure)
-                .Take(Math.Max(count / 4, 1000))
-                .AsParallel()
-                .WithDegreeOfParallelism(16)
-                .DistinctBy(s => (string.Join(";", s.Opened.Order()), s.Position, s.Pressure))
-                .ToList();
-            current = optimized;
-            progress.AddProgress();
+                newPressure = step.Pressure + currentSpeed * distance;
+                var newElapsed = step.Elapsed + distance;
+                var newOpened = step.Opened.Add(newValve);
+                
+                Process(new Step(newValve, newOpened, newPressure, newElapsed));
+            }
         }
-
-        var maxPressure = current.Max(c => c.Pressure);
+        
+        Process(step);
         
         Console.WriteLine(maxPressure);
     }
 
     public void CalculateTaskTwo(string source)
     {
-        var valves = ParseInput(source).ToDictionary(v => v.Id);
+        var valvesList = ParseInput(source);
+        var valvesMap = valvesList.ToDictionary(v => v.Id);
+        var nonZeroValves = valvesList.Where(v => v.FlowRate > 0)
+            .OrderByDescending(v => v.FlowRate)
+            .Select(v => v.Id)
+            .ToArray();
+        var distances = CalculateDistances(valvesList);
 
-        var first = new[] {new StepWithElefant("AA", "AA", ImmutableHashSet<string>.Empty, 0)};
-        var nonZero = valves.Where(v => v.Value.FlowRate > 0).Select(v => v.Key).Count();
-        var allFlowRate = valves.Values.Sum(v => v.FlowRate);
-        var current = first.ToList();
+        var step = new StepWithElephant("AA", "AA", ImmutableDictionary<string, int>.Empty, 0, 0);
 
-        var progress = ProgressHelper.Create(26);
-        foreach (var i in Enumerable.Range(0, 26))
+        var maxPressure = 0L;
+        var time = 26;
+
+        void Process(StepWithElephant step)
         {
-            var result = new ConcurrentBag<StepWithElefant>();
+            // Do nothing
+            var newPressure = step.Opened.Select(op => valvesMap[op.Key].FlowRate * (time - op.Value)).Sum();
+            if (newPressure > maxPressure)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(step));
+                Console.WriteLine(maxPressure);
+            }
+            maxPressure = Math.Max(maxPressure, newPressure);
 
-            Parallel.ForEach(current,
-                new ParallelOptions { MaxDegreeOfParallelism = 32},
-                (item, state) =>
+            var timeRemaining = time - step.Elapsed - 1;
+            var maxPossiblePressure = maxPressure + nonZeroValves.Where(v => !step.Opened.ContainsKey(v))
+                .Select((s, index) => valvesMap[s].FlowRate * (timeRemaining - index/2))
+                .Sum();
+
+            if (maxPossiblePressure <= maxPressure)
+            {
+                return;
+            }
+            
+            if (step.ElephantElapsed > step.Elapsed)
+            {
+                foreach (var newValve in nonZeroValves.Where(v => !step.Opened.ContainsKey(v)))
                 {
-                    if (item.Opened.Count == nonZero)
+                    var distance = distances[(step.Position, newValve)] + 1;
+                    if (step.Elapsed + distance >= time)
                     {
-                        result.Add(item with {TotalPressure = item.TotalPressure + allFlowRate});
-                        return;
+                        continue;
                     }
 
-                    var manPipe = valves[item.Position];
-                    var elefantPipe = valves[item.ElefantPosition];
-                    var deltaPressure = item.Opened.Select(s => valves[s].FlowRate).Sum();
-                    var newPressure = item.TotalPressure + deltaPressure;
-                    var manCanAct = !item.Opened.Contains(item.Position) && manPipe.FlowRate > 0;
-                    var elefantCanAct = !item.Opened.Contains(item.ElefantPosition) && elefantPipe.FlowRate > 0;
+                    var newElapsed = step.Elapsed + distance;
+                    var newOpened = step.Opened.Add(newValve, newElapsed);
 
-                    var manActedPossibilities = manCanAct ? new[] {true, false} : new[] {false};
-
-                    foreach (var manActed in manActedPossibilities)
+                    Process(step with {Position = newValve, Opened = newOpened, Elapsed = newElapsed});
+                }
+            }
+            else
+            {
+                foreach (var newValve in nonZeroValves.Where(v => !step.Opened.ContainsKey(v)))
+                {
+                    var distance = distances[(step.ElephantPosition, newValve)] + 1;
+                    if (step.ElephantElapsed + distance >= time)
                     {
-                        var manPossibleMoves = manActed ? new[] {item.Position} : manPipe.Valves;
-                        var elefantActedPossibilites =
-                            elefantCanAct && (!manActed || item.Position != item.ElefantPosition)
-                                ? new[] {true, false}
-                                : new[] {false};
-
-                        foreach (var elefantActed in elefantActedPossibilites)
-                        {
-                            var elefantPossibleMoves = elefantActed
-                                ? new[] {item.ElefantPosition}
-                                : elefantPipe.Valves;
-
-                            var newOpened = item.Opened;
-                            if (elefantActed || manActed)
-                            {
-                                if (manActed)
-                                {
-                                    newOpened = newOpened.Add(item.Position);
-                                }
-
-                                if (elefantActed)
-                                {
-                                    newOpened = newOpened.Add(item.ElefantPosition);
-                                }
-                            }
-                            
-                            foreach (var manMove in manPossibleMoves)
-                            {
-                                foreach (var elefantMove in elefantPossibleMoves)
-                                {
-                                    result.Add(new (manMove, elefantMove, newOpened, newPressure));
-                                }
-                            }
-                        }
+                        continue;
                     }
-                });
 
-            var count = result.Count;
-            var optimized = result
-                .OrderByDescending(r => r.TotalPressure)
-                .Take(Math.Max(count / 4, 1000))
-                .AsParallel()
-                .WithDegreeOfParallelism(16)
-                .DistinctBy(s => s.SortValue)
-                .ToList();
-            
-            current = optimized;
-            
-            progress.AddProgress();
+                    var newElapsed = step.ElephantElapsed + distance;
+                    var newOpened = step.Opened.Add(newValve, newElapsed);
+
+                    Process(step with {ElephantPosition = newValve, Opened = newOpened, ElephantElapsed = newElapsed});
+                }
+            }
         }
 
-        var maxPressure = current.MaxBy(c => c.TotalPressure);
+        Process(step);
         
-        Console.WriteLine(maxPressure.TotalPressure);
+        Console.WriteLine(maxPressure);
+    }
+
+    private static Dictionary<(string From, string To), int> CalculateDistances(Valve[] valves)
+    {
+        var valvesToCalculate = valves
+            .Select(v => v.Id).ToImmutableHashSet();
+        var valvesMap = valves
+            .ToDictionary(v => v.Id);
+
+        var enumerated = valvesToCalculate.Order().ToArray();
+        var enumeratedMap = enumerated
+            .Select((id, index) => new {id, index})
+            .ToImmutableDictionary(v => v.id, v => v.index);
+
+        var existingPaths = valves.SelectMany(v1 =>
+            v1.Valves.Select(v2 => new Pair(v1.Id, v2)))
+            .GroupBy(p => p.V1)
+            .ToDictionary(p => p.Key, p => p.Select(p1 => p1.V2).ToArray());
+
+        var result = new Option<int>[enumerated.Length, enumerated.Length];
+        for (var i = 0; i < enumerated.Length; i++)
+        {
+            for (var j = 0; j < enumerated.Length; j++)
+            {
+                result[i,j] = Option<int>.None;
+            }
+        }
+
+        foreach (var valve in valvesToCalculate)
+        {
+            foreach (var nested in valvesMap[valve].Valves)
+            {
+                var i = enumeratedMap[valve];
+                var j = enumeratedMap[nested];
+
+                result[i, j] = 1;
+                result[j, i] = 1;
+            }
+        }
+
+        foreach (var pathLength in Enumerable.Range(0, enumerated.Length - 1))
+        {
+            for (var i = 0; i < enumerated.Length; i++)
+            {
+                for (var j = 0; j < enumerated.Length; j++)
+                {
+                    if (j >= i)
+                    {
+                        continue;
+                    }
+
+                    var path =
+                        from p1 in result[i, pathLength]
+                        from p2 in result[j, pathLength]
+                        select p1 + p2;
+
+                    var newPath = path.Match(
+                        v => result[i,j].Match(
+                            r => Math.Min(r, v),
+                            () => v
+                            ),
+                        () => result[i, j]
+                    );
+
+                    result[i, j] = newPath;
+                    result[j, i] = newPath;
+                }
+            }
+        }
+
+        var calculated = from i in Enumerable.Range(0, enumerated.Length)
+            from j in Enumerable.Range(0, enumerated.Length)
+            where j != i
+            let fr = enumerated[i]
+            let to = enumerated[j]
+            let path = result[i, j].Match(x => x,
+                () => throw new InvalidOperationException($"Did not calculate length between {fr} and {to}"))
+            select new {fr, to, path};
+
+        return calculated.ToDictionary(r => (r.fr, r.to), r => r.path);
     }
 
     private static Valve[] ParseInput(string input)

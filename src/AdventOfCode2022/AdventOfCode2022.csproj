@@ -75,6 +75,7 @@
     <ItemGroup>
       <PackageReference Include="Autofac" Version="6.5.0" />
       <PackageReference Include="FParsec.CSharp" Version="12.2.0" />
+      <PackageReference Include="LanguageExt.Core" Version="4.4.7" />
     </ItemGroup>
 
 </Project>

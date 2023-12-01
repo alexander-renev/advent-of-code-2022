@@ -60,75 +60,60 @@ public class Day16 : IDay
     {
         var valvesList = ParseInput(source);
         var valvesMap = valvesList.ToDictionary(v => v.Id);
-        var nonZeroValves = valvesList.Where(v => v.FlowRate > 0)
-            .OrderByDescending(v => v.FlowRate)
-            .Select(v => v.Id)
-            .ToArray();
+        var nonZeroValves = valvesList.Where(v => v.FlowRate > 0).Select(v => v.Id).ToHashSet();
         var distances = CalculateDistances(valvesList);
 
-        var step = new StepWithElephant("AA", "AA", ImmutableDictionary<string, int>.Empty, 0, 0);
+        var step = new Step("AA", ImmutableHashSet<string>.Empty, 0, 0);
 
         var maxPressure = 0L;
         var time = 26;
+        var solutions = new List<(long pressure, ImmutableHashSet<string> opened)>();
 
-        void Process(StepWithElephant step)
+        void Process(Step step)
         {
-            // Do nothing
-            var newPressure = step.Opened.Select(op => valvesMap[op.Key].FlowRate * (time - op.Value)).Sum();
-            if (newPressure > maxPressure)
-            {
-                Console.WriteLine(JsonSerializer.Serialize(step));
-                Console.WriteLine(maxPressure);
-            }
-            maxPressure = Math.Max(maxPressure, newPressure);
-
-            var timeRemaining = time - step.Elapsed - 1;
-            var maxPossiblePressure = maxPressure + nonZeroValves.Where(v => !step.Opened.ContainsKey(v))
-                .Select((s, index) => valvesMap[s].FlowRate * (timeRemaining - index/2))
-                .Sum();
-
-            if (maxPossiblePressure <= maxPressure)
-            {
-                return;
-            }
+            var currentSpeed = step.Opened.Select(op => valvesMap[op].FlowRate).Sum();
             
-            if (step.ElephantElapsed > step.Elapsed)
+            // Do nothing
+            var newPressure = step.Pressure + currentSpeed * (time - step.Elapsed);
+            maxPressure = Math.Max(maxPressure, newPressure);
+            
+            foreach (var newValve in nonZeroValves.Where(v => !step.Opened.Contains(v)))
             {
-                foreach (var newValve in nonZeroValves.Where(v => !step.Opened.ContainsKey(v)))
+                var distance = distances[(step.Position, newValve)] + 1;
+                if (step.Elapsed + distance >= time)
                 {
-                    var distance = distances[(step.Position, newValve)] + 1;
-                    if (step.Elapsed + distance >= time)
-                    {
-                        continue;
-                    }
-
-                    var newElapsed = step.Elapsed + distance;
-                    var newOpened = step.Opened.Add(newValve, newElapsed);
-
-                    Process(step with {Position = newValve, Opened = newOpened, Elapsed = newElapsed});
+                    continue;
                 }
+
+                var newStepPressure = step.Pressure + currentSpeed * distance;
+                var newElapsed = step.Elapsed + distance;
+                var newOpened = step.Opened.Add(newValve);
+                
+                Process(new Step(newValve, newOpened, newStepPressure, newElapsed));
             }
-            else
+
+            solutions.Add((newPressure, step.Opened));
+        }
+        
+        Process(step);
+
+        long max = 0;
+        foreach (var s1 in solutions)
+        {
+            foreach (var s2 in solutions)
             {
-                foreach (var newValve in nonZeroValves.Where(v => !step.Opened.ContainsKey(v)))
+                if (s1.pressure + s2.pressure > max)
                 {
-                    var distance = distances[(step.ElephantPosition, newValve)] + 1;
-                    if (step.ElephantElapsed + distance >= time)
+                    if (s1.opened.All(v => !s2.opened.Contains(v)))
                     {
-                        continue;
+                        max = s1.pressure + s2.pressure;
                     }
-
-                    var newElapsed = step.ElephantElapsed + distance;
-                    var newOpened = step.Opened.Add(newValve, newElapsed);
-
-                    Process(step with {ElephantPosition = newValve, Opened = newOpened, ElephantElapsed = newElapsed});
+                    
                 }
             }
         }
-
-        Process(step);
         
-        Console.WriteLine(maxPressure);
+        Console.WriteLine(max);
     }
 
     private static Dictionary<(string From, string To), int> CalculateDistances(Valve[] valves)
